@@ -72,6 +72,7 @@ vi.mock("../src/skill-loader.js", () => ({
 }));
 
 import { resumeAgent, runAgent } from "../src/agent-runner.js";
+import { getConfig, getToolNamesForType } from "../src/agent-types.js";
 
 function createSession(finalText: string) {
   const listeners: Array<(event: any) => void> = [];
@@ -206,6 +207,80 @@ describe("agent-runner final output capture", () => {
     await runAgent(ctx, "Explore", "go", { pi, agentId: "a1b2c3d4e5f6" });
 
     expect(session.setSessionName).toHaveBeenCalledWith("Explore#a1b2c3d4");
+  });
+});
+
+describe("agent-runner capability planes", () => {
+  it("passes empty built-in tools through to createAgentSession", async () => {
+    const { session } = createSession("NO TOOLS");
+    createAgentSession.mockResolvedValue({ session });
+    vi.mocked(getToolNamesForType).mockReturnValueOnce([]);
+
+    await runAgent(ctx, "Explore", "go", { pi });
+
+    expect(createAgentSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tools: [],
+      }),
+    );
+  });
+
+  it("isolated disables extensions and skills but preserves configured built-in tools", async () => {
+    const { session } = createSession("ISOLATED");
+    createAgentSession.mockResolvedValue({ session });
+    vi.mocked(getConfig).mockReturnValueOnce({
+      displayName: "Explore",
+      description: "Explore",
+      builtinToolNames: ["read", "grep"],
+      extensions: true,
+      skills: ["planning"],
+      promptMode: "replace",
+    });
+    vi.mocked(getToolNamesForType).mockReturnValueOnce(["read", "grep"]);
+
+    await runAgent(ctx, "Explore", "go", { pi, isolated: true });
+
+    expect(defaultResourceLoaderCtor).toHaveBeenCalledWith(
+      expect.objectContaining({
+        noExtensions: true,
+        noSkills: true,
+      }),
+    );
+    expect(createAgentSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tools: ["read", "grep"],
+      }),
+    );
+  });
+
+  it("filters extension allowlists against active tool names", async () => {
+    const { session } = createSession("FILTERED");
+    session.getActiveToolNames.mockReturnValue([
+      "read",
+      "web_search",
+      "fetch_content",
+      "get_search_content",
+      "code_search",
+      "Agent",
+    ]);
+    createAgentSession.mockResolvedValue({ session });
+    vi.mocked(getConfig).mockReturnValueOnce({
+      displayName: "Explore",
+      description: "Explore",
+      builtinToolNames: ["read"],
+      extensions: ["web_search", "fetch_content"],
+      skills: true,
+      promptMode: "replace",
+    });
+    vi.mocked(getToolNamesForType).mockReturnValueOnce(["read"]);
+
+    await runAgent(ctx, "Explore", "go", { pi });
+
+    expect(session.setActiveToolsByName).toHaveBeenCalledWith([
+      "read",
+      "web_search",
+      "fetch_content",
+    ]);
   });
 });
 

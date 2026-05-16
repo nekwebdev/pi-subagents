@@ -703,7 +703,7 @@ Guidelines:
       ),
       isolated: Type.Optional(
         Type.Boolean({
-          description: "If true, agent gets no extension/MCP tools — only built-in tools.",
+          description: "If true, agent gets no extension/MCP tools or skills. Built-in tools still follow the agent's `tools` frontmatter.",
         }),
       ),
       inherit_context: Type.Optional(
@@ -1645,17 +1645,17 @@ The file format is a markdown file with YAML frontmatter and a system prompt bod
 \`\`\`markdown
 ---
 description: <one-line description shown in UI>
-tools: <comma-separated built-in tools: read, bash, edit, write, grep, find, ls. Use "none" for no tools. Omit for all tools>
+tools: <comma-separated built-in tools: read, bash, edit, write, grep, find, ls. Use "none" for no built-in tools. Omit for all built-in tools>
 model: <optional model as "provider/modelId", e.g. "anthropic/claude-haiku-4-5-20251001". Omit to inherit parent model>
 thinking: <optional thinking level: off, minimal, low, medium, high, xhigh. Omit to inherit>
 max_turns: <optional max agentic turns. 0 or omit for unlimited (default)>
 prompt_mode: <"replace" (body IS the full system prompt) or "append" (body is appended to default prompt). Default: replace>
-extensions: <true (inherit all MCP/extension tools), false (none), or comma-separated names. Default: true>
-skills: <true (inherit all), false (none), or comma-separated skill names to preload into prompt. Default: true>
+extensions: <true/exact lowercase "all" to inherit all external/MCP tools, false/"none" for none, or comma-separated active tool-name substrings such as "web_search, fetch_content". These are tool names, not extension package IDs. Default: true>
+skills: <true/exact lowercase "all" to inherit upstream skills, false/"none" for none, or comma-separated skill names to preload into prompt. Default: true>
 disallowed_tools: <comma-separated tool names to block, even if otherwise available. Omit for none>
 inherit_context: <true to fork parent conversation into agent so it sees chat history. Default: false>
 run_in_background: <true to run in background by default. Default: false>
-isolated: <true for no extension/MCP tools, only built-in tools. Default: false>
+isolated: <true for no extension/MCP tools or skills; built-in tools still follow tools. Default: false>
 memory: <"user" (global), "project" (per-project), or "local" (gitignored per-project) for persistent memory. Omit for none>
 isolation: <"worktree" to run in isolated git worktree. Omit for normal>
 ---
@@ -1669,7 +1669,7 @@ Guidelines for choosing settings:
 - Use prompt_mode: append if the agent should keep the default system prompt and add specialization on top
 - Use prompt_mode: replace for fully custom agents with their own personality/instructions
 - Set inherit_context: true if the agent needs to know what was discussed in the parent conversation
-- Set isolated: true if the agent should NOT have access to MCP servers or other extensions
+- Set isolated: true if the agent should NOT have access to MCP servers, other extensions, or skills; built-in tools still follow tools
 - Only include frontmatter fields that differ from defaults — omit fields where the default is fine
 
 Write the file using the write tool. Only write the file, nothing else.`;
