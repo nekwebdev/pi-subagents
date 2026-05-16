@@ -202,6 +202,22 @@ describe("agent type registry", () => {
       expect(names).toEqual(["read", "grep", "find"]);
     });
 
+    it("getToolNamesForType preserves empty builtinToolNames for tools: none", () => {
+      const agents = new Map([
+        [
+          "notool",
+          makeAgentConfig({
+            name: "notool",
+            builtinToolNames: [],
+          }),
+        ],
+      ]);
+      registerAgents(agents);
+
+      expect(getToolNamesForType("notool")).toEqual([]);
+      expect(getConfig("notool").builtinToolNames).toEqual([]);
+    });
+
     it("getConfig falls back to general-purpose for unknown types", () => {
       const config = getConfig("nonexistent");
       expect(config.displayName).toBe("Agent");

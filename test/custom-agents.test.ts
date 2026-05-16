@@ -311,6 +311,34 @@ All.`);
     expect(agent.skills).toBe(true);
   });
 
+  it("extensions: all → true (inherit all)", () => {
+    writeAgent("extall", `---
+extensions: all
+skills: all
+---
+
+All.`);
+
+    const result = loadCustomAgents(tmpDir);
+    const agent = result.get("extall")!;
+    expect(agent.extensions).toBe(true);
+    expect(agent.skills).toBe(true);
+  });
+
+  it("only exact lowercase all is special for extensions and skills", () => {
+    writeAgent("upperall", `---
+extensions: ALL
+skills: ALL
+---
+
+Upper all.`);
+
+    const result = loadCustomAgents(tmpDir);
+    const agent = result.get("upperall")!;
+    expect(agent.extensions).toEqual(["ALL"]);
+    expect(agent.skills).toEqual(["ALL"]);
+  });
+
   it("handles enabled: false frontmatter", () => {
     writeAgent("disabled", `---
 enabled: false

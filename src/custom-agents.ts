@@ -129,7 +129,7 @@ function parseMemory(val: unknown): MemoryScope | undefined {
  * omitted/true → true (inherit all); false/"none"/empty → false; csv → listed names.
  */
 function inheritField(val: unknown): true | string[] | false {
-  if (val === undefined || val === null || val === true) return true;
+  if (val === undefined || val === null || val === true || val === "all") return true;
   if (val === false || val === "none") return false;
   const items = csvList(val, []);
   return items.length > 0 ? items : false;
