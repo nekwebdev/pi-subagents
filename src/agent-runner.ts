@@ -14,7 +14,7 @@ import {
   SessionManager,
   SettingsManager,
 } from "@mariozechner/pi-coding-agent";
-import { getAgentConfig, getConfig, getMemoryToolNames, getReadOnlyMemoryToolNames, getToolNamesForType } from "./agent-types.js";
+import { BUILTIN_TOOL_NAMES, getAgentConfig, getConfig, getMemoryToolNames, getReadOnlyMemoryToolNames, getToolNamesForType } from "./agent-types.js";
 import { buildParentContext, extractText } from "./context.js";
 import { DEFAULT_AGENTS } from "./default-agents.js";
 import { detectEnv } from "./env.js";
@@ -273,7 +273,10 @@ export async function runAgent(
     settingsManager: SettingsManager.create(effectiveCwd, agentDir),
     modelRegistry: ctx.modelRegistry,
     model,
-    tools: toolNames,
+    // createAgentSession.tools is a global allowlist (built-ins + extension tools).
+    // Only pass it when extensions are disabled; otherwise extension tools would be
+    // excluded from the registry before our extension allowlist can select them.
+    ...(extensions === false ? { tools: toolNames } : {}),
     resourceLoader: loader,
   };
   if (thinkingLevel) {
@@ -292,14 +295,16 @@ export async function runAgent(
     ? new Set(agentConfig.disallowedTools)
     : undefined;
 
-  // Filter active tools: remove our own tools to prevent nesting,
-  // apply extension allowlist if specified, and apply disallowedTools denylist
+  // Filter registered tools: remove our own tools to prevent nesting,
+  // allow only configured built-ins, apply extension allowlist if specified,
+  // and apply disallowedTools denylist.
   if (extensions !== false) {
     const builtinToolNameSet = new Set(toolNames);
-    const activeTools = session.getActiveToolNames().filter((t) => {
+    const registeredToolNames = session.getAllTools().map((t) => t.name);
+    const activeTools = registeredToolNames.filter((t) => {
       if (EXCLUDED_TOOL_NAMES.includes(t)) return false;
       if (disallowedSet?.has(t)) return false;
-      if (builtinToolNameSet.has(t)) return true;
+      if (BUILTIN_TOOL_NAMES.includes(t)) return builtinToolNameSet.has(t);
       if (Array.isArray(extensions)) {
         return extensions.some(ext => t.startsWith(ext) || t.includes(ext));
       }

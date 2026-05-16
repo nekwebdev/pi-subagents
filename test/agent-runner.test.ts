@@ -29,7 +29,8 @@ vi.mock("@mariozechner/pi-coding-agent", () => ({
 }));
 
 vi.mock("../src/agent-types.js", () => ({
-  getConfig: vi.fn(() => ({
+  BUILTIN_TOOL_NAMES: ["read", "bash", "edit", "write", "grep", "find", "ls"],
+  getConfig: vi.fn(() => ({ 
     displayName: "Explore",
     description: "Explore",
     builtinToolNames: ["read"],
@@ -91,6 +92,7 @@ function createSession(finalText: string) {
     abort: vi.fn(),
     steer: vi.fn(),
     getActiveToolNames: vi.fn(() => ["read"]),
+    getAllTools: vi.fn(() => [{ name: "read" }]),
     setActiveToolsByName: vi.fn(),
     setSessionName: vi.fn(),
     bindExtensions: vi.fn(async () => {}),
@@ -253,22 +255,19 @@ describe("agent-runner capability planes", () => {
     );
   });
 
-  it("filters extension allowlists against active tool names", async () => {
-    const { session } = createSession("FILTERED");
-    session.getActiveToolNames.mockReturnValue([
-      "read",
-      "web_search",
-      "fetch_content",
-      "get_search_content",
-      "code_search",
-      "Agent",
+  it("does not pass built-in tools as a global allowlist when extensions are enabled", async () => {
+    const { session } = createSession("EXTENSIONS");
+    session.getAllTools.mockReturnValue([
+      { name: "read" },
+      { name: "bash" },
+      { name: "web_search" },
     ]);
     createAgentSession.mockResolvedValue({ session });
     vi.mocked(getConfig).mockReturnValueOnce({
       displayName: "Explore",
       description: "Explore",
       builtinToolNames: ["read"],
-      extensions: ["web_search", "fetch_content"],
+      extensions: true,
       skills: true,
       promptMode: "replace",
     });
@@ -276,8 +275,43 @@ describe("agent-runner capability planes", () => {
 
     await runAgent(ctx, "Explore", "go", { pi });
 
+    expect(createAgentSession).toHaveBeenCalledWith(
+      expect.not.objectContaining({ tools: expect.anything() }),
+    );
     expect(session.setActiveToolsByName).toHaveBeenCalledWith([
       "read",
+      "web_search",
+    ]);
+  });
+
+  it("filters extension allowlists against registered tool names", async () => {
+    const { session } = createSession("FILTERED");
+    session.getAllTools.mockReturnValue([
+      { name: "read" },
+      { name: "bash" },
+      { name: "grep" },
+      { name: "web_search" },
+      { name: "fetch_content" },
+      { name: "get_search_content" },
+      { name: "code_search" },
+      { name: "Agent" },
+    ]);
+    createAgentSession.mockResolvedValue({ session });
+    vi.mocked(getConfig).mockReturnValueOnce({
+      displayName: "Explore",
+      description: "Explore",
+      builtinToolNames: ["read", "grep"],
+      extensions: ["web_search", "fetch_content"],
+      skills: true,
+      promptMode: "replace",
+    });
+    vi.mocked(getToolNamesForType).mockReturnValueOnce(["read", "grep"]);
+
+    await runAgent(ctx, "Explore", "go", { pi });
+
+    expect(session.setActiveToolsByName).toHaveBeenCalledWith([
+      "read",
+      "grep",
       "web_search",
       "fetch_content",
     ]);
