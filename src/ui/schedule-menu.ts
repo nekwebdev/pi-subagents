@@ -8,7 +8,7 @@
  * if real demand emerges.
  */
 
-import type { ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import type { SubagentScheduler } from "../schedule.js";
 import type { ScheduledSubagent } from "../types.js";
 
@@ -52,7 +52,10 @@ function formatJob(j: ScheduledSubagent, scheduler: SubagentScheduler): string {
 }
 
 /** Multi-line details block for the cancel confirm. */
-function formatDetails(j: ScheduledSubagent, scheduler: SubagentScheduler): string {
+function formatDetails(
+  j: ScheduledSubagent,
+  scheduler: SubagentScheduler,
+): string {
   const next = scheduler.getNextRun(j.id) ?? "—";
   return [
     `name:      ${j.name}`,
@@ -85,7 +88,7 @@ export async function showSchedulesMenu(
     return;
   }
 
-  const labels = jobs.map(j => formatJob(j, scheduler));
+  const labels = jobs.map((j) => formatJob(j, scheduler));
   const choice = await ctx.ui.select(
     `Scheduled jobs (${jobs.length}) — select to cancel`,
     labels,
@@ -96,7 +99,10 @@ export async function showSchedulesMenu(
   if (idx < 0) return;
   const job = jobs[idx];
 
-  const ok = await ctx.ui.confirm(`Cancel "${job.name}"?`, formatDetails(job, scheduler));
+  const ok = await ctx.ui.confirm(
+    `Cancel "${job.name}"?`,
+    formatDetails(job, scheduler),
+  );
   if (!ok) return;
 
   scheduler.removeJob(job.id);

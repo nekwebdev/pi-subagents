@@ -4,7 +4,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { getAgentDir } from "@mariozechner/pi-coding-agent";
+import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import type { JoinMode } from "./types.js";
 
 export interface SubagentsSettings {
@@ -40,7 +40,11 @@ export interface SettingsAppliers {
 /** Emit callback — a subset of `pi.events.emit` to keep helpers testable. */
 export type SettingsEmit = (event: string, payload: unknown) => void;
 
-const VALID_JOIN_MODES: ReadonlySet<string> = new Set<JoinMode>(["async", "group", "smart"]);
+const VALID_JOIN_MODES: ReadonlySet<string> = new Set<JoinMode>([
+  "async",
+  "group",
+  "smart",
+]);
 
 // Sanity ceilings — prevent hand-edited configs from asking for values that
 // make no operational sense (e.g. 1e6 concurrent subagents). Permissive enough
@@ -75,7 +79,10 @@ function sanitize(raw: unknown): SubagentsSettings {
   ) {
     out.graceTurns = r.graceTurns as number;
   }
-  if (typeof r.defaultJoinMode === "string" && VALID_JOIN_MODES.has(r.defaultJoinMode)) {
+  if (
+    typeof r.defaultJoinMode === "string" &&
+    VALID_JOIN_MODES.has(r.defaultJoinMode)
+  ) {
     out.defaultJoinMode = r.defaultJoinMode as JoinMode;
   }
   if (typeof r.schedulingEnabled === "boolean") {
@@ -103,14 +110,19 @@ function readSettingsFile(path: string): SubagentsSettings {
     return sanitize(JSON.parse(readFileSync(path, "utf-8")));
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
-    console.warn(`[pi-subagents] Ignoring malformed settings at ${path}: ${reason}`);
+    console.warn(
+      `[pi-subagents] Ignoring malformed settings at ${path}: ${reason}`,
+    );
     return {};
   }
 }
 
 /** Load merged settings: global provides defaults, project overrides. */
 export function loadSettings(cwd: string = process.cwd()): SubagentsSettings {
-  return { ...readSettingsFile(globalPath()), ...readSettingsFile(projectPath(cwd)) };
+  return {
+    ...readSettingsFile(globalPath()),
+    ...readSettingsFile(projectPath(cwd)),
+  };
 }
 
 /**
@@ -118,7 +130,10 @@ export function loadSettings(cwd: string = process.cwd()): SubagentsSettings {
  * Returns `true` on success, `false` if the write (or mkdir) failed so the
  * caller can surface a warning — persistence isn't fatal but isn't silent.
  */
-export function saveSettings(s: SubagentsSettings, cwd: string = process.cwd()): boolean {
+export function saveSettings(
+  s: SubagentsSettings,
+  cwd: string = process.cwd(),
+): boolean {
   const path = projectPath(cwd);
   try {
     mkdirSync(dirname(path), { recursive: true });
@@ -130,12 +145,18 @@ export function saveSettings(s: SubagentsSettings, cwd: string = process.cwd()):
 }
 
 /** Apply persisted settings to the in-memory state via caller-supplied setters. */
-export function applySettings(s: SubagentsSettings, appliers: SettingsAppliers): void {
-  if (typeof s.maxConcurrent === "number") appliers.setMaxConcurrent(s.maxConcurrent);
-  if (typeof s.defaultMaxTurns === "number") appliers.setDefaultMaxTurns(s.defaultMaxTurns);
+export function applySettings(
+  s: SubagentsSettings,
+  appliers: SettingsAppliers,
+): void {
+  if (typeof s.maxConcurrent === "number")
+    appliers.setMaxConcurrent(s.maxConcurrent);
+  if (typeof s.defaultMaxTurns === "number")
+    appliers.setDefaultMaxTurns(s.defaultMaxTurns);
   if (typeof s.graceTurns === "number") appliers.setGraceTurns(s.graceTurns);
   if (s.defaultJoinMode) appliers.setDefaultJoinMode(s.defaultJoinMode);
-  if (typeof s.schedulingEnabled === "boolean") appliers.setSchedulingEnabled(s.schedulingEnabled);
+  if (typeof s.schedulingEnabled === "boolean")
+    appliers.setSchedulingEnabled(s.schedulingEnabled);
 }
 
 /**
@@ -149,7 +170,10 @@ export function persistToastFor(
 ): { message: string; level: "info" | "warning" } {
   return persisted
     ? { message: successMsg, level: "info" }
-    : { message: `${successMsg} (session only; failed to persist)`, level: "warning" };
+    : {
+        message: `${successMsg} (session only; failed to persist)`,
+        level: "warning",
+      };
 }
 
 /**

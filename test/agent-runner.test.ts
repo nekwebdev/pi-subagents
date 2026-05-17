@@ -14,7 +14,7 @@ const {
   settingsManagerCreate: vi.fn(() => ({ kind: "settings-manager" })),
 }));
 
-vi.mock("@mariozechner/pi-coding-agent", () => ({
+vi.mock("@earendil-works/pi-coding-agent", () => ({
   createAgentSession,
   DefaultResourceLoader: class {
     constructor(options: any) {
@@ -30,7 +30,7 @@ vi.mock("@mariozechner/pi-coding-agent", () => ({
 
 vi.mock("../src/agent-types.js", () => ({
   BUILTIN_TOOL_NAMES: ["read", "bash", "edit", "write", "grep", "find", "ls"],
-  getConfig: vi.fn(() => ({ 
+  getConfig: vi.fn(() => ({
     displayName: "Explore",
     description: "Explore",
     builtinToolNames: ["read"],
@@ -56,7 +56,11 @@ vi.mock("../src/agent-types.js", () => ({
 }));
 
 vi.mock("../src/env.js", () => ({
-  detectEnv: vi.fn(async () => ({ isGitRepo: false, branch: "", platform: "linux" })),
+  detectEnv: vi.fn(async () => ({
+    isGitRepo: false,
+    branch: "",
+    platform: "linux",
+  })),
 }));
 
 vi.mock("../src/prompts.js", () => ({
@@ -148,19 +152,29 @@ describe("agent-runner final output capture", () => {
     const { session } = createSession("CONFIGURED");
     createAgentSession.mockResolvedValue({ session });
 
-    await runAgent(ctx, "Explore", "Say CONFIGURED", { pi, cwd: "/tmp/worktree" });
+    await runAgent(ctx, "Explore", "Say CONFIGURED", {
+      pi,
+      cwd: "/tmp/worktree",
+    });
 
     expect(getAgentDir).toHaveBeenCalledTimes(1);
-    expect(defaultResourceLoaderCtor).toHaveBeenCalledWith(expect.objectContaining({
-      cwd: "/tmp/worktree",
-      agentDir: "/mock/agent-dir",
-    }));
-    expect(settingsManagerCreate).toHaveBeenCalledWith("/tmp/worktree", "/mock/agent-dir");
+    expect(defaultResourceLoaderCtor).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cwd: "/tmp/worktree",
+        agentDir: "/mock/agent-dir",
+      }),
+    );
+    expect(settingsManagerCreate).toHaveBeenCalledWith(
+      "/tmp/worktree",
+      "/mock/agent-dir",
+    );
     expect(sessionManagerInMemory).toHaveBeenCalledWith("/tmp/worktree");
-    expect(createAgentSession).toHaveBeenCalledWith(expect.objectContaining({
-      cwd: "/tmp/worktree",
-      agentDir: "/mock/agent-dir",
-    }));
+    expect(createAgentSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cwd: "/tmp/worktree",
+        agentDir: "/mock/agent-dir",
+      }),
+    );
   });
 
   it("suppresses AGENTS.md/CLAUDE.md/APPEND_SYSTEM.md for subagents", async () => {
@@ -179,7 +193,9 @@ describe("agent-runner final output capture", () => {
     );
     // The override returns an empty list so any loaded sources are discarded.
     const ctorArgs = defaultResourceLoaderCtor.mock.calls[0][0];
-    expect(ctorArgs.appendSystemPromptOverride(["would-be-loaded"])).toEqual([]);
+    expect(ctorArgs.appendSystemPromptOverride(["would-be-loaded"])).toEqual(
+      [],
+    );
   });
 
   it("resumeAgent also falls back to the final assistant message text", async () => {
@@ -324,7 +340,10 @@ describe("agent-runner capability planes", () => {
 // is the source of truth for total tokens (survives compaction).
 describe("agent-runner usage callback wiring", () => {
   function emitMessageEnd(listeners: Array<(e: any) => void>, usage: any) {
-    const event = { type: "message_end", message: { role: "assistant", usage } };
+    const event = {
+      type: "message_end",
+      message: { role: "assistant", usage },
+    };
     for (const l of listeners) l(event);
   }
 
@@ -332,12 +351,16 @@ describe("agent-runner usage callback wiring", () => {
     const { session, listeners } = createSession("OK");
     createAgentSession.mockResolvedValue({ session });
 
-    const seen: Array<{ input: number; output: number; cacheWrite: number }> = [];
+    const seen: Array<{ input: number; output: number; cacheWrite: number }> =
+      [];
     session.prompt = vi.fn(async () => {
       // Two assistant messages over the run
       emitMessageEnd(listeners, { input: 100, output: 50, cacheWrite: 10 });
       emitMessageEnd(listeners, { input: 200, output: 80, cacheWrite: 20 });
-      session.messages.push({ role: "assistant", content: [{ type: "text", text: "OK" }] });
+      session.messages.push({
+        role: "assistant",
+        content: [{ type: "text", text: "OK" }],
+      });
     });
 
     await runAgent(ctx, "Explore", "go", {
@@ -358,7 +381,10 @@ describe("agent-runner usage callback wiring", () => {
     const seen: any[] = [];
     session.prompt = vi.fn(async () => {
       emitMessageEnd(listeners, { input: 50 }); // output, cacheWrite missing
-      session.messages.push({ role: "assistant", content: [{ type: "text", text: "OK" }] });
+      session.messages.push({
+        role: "assistant",
+        content: [{ type: "text", text: "OK" }],
+      });
     });
 
     await runAgent(ctx, "Explore", "go", {
@@ -376,7 +402,10 @@ describe("agent-runner usage callback wiring", () => {
     const cb = vi.fn();
     session.prompt = vi.fn(async () => {
       emitMessageEnd(listeners, undefined);
-      session.messages.push({ role: "assistant", content: [{ type: "text", text: "OK" }] });
+      session.messages.push({
+        role: "assistant",
+        content: [{ type: "text", text: "OK" }],
+      });
     });
 
     await runAgent(ctx, "Explore", "go", { pi, onAssistantUsage: cb });
@@ -390,7 +419,10 @@ describe("agent-runner usage callback wiring", () => {
 
     session.prompt = vi.fn(async () => {
       emitMessageEnd(listeners, { input: 10, output: 20, cacheWrite: 5 });
-      session.messages.push({ role: "assistant", content: [{ type: "text", text: "RESUMED" }] });
+      session.messages.push({
+        role: "assistant",
+        content: [{ type: "text", text: "RESUMED" }],
+      });
     });
 
     await resumeAgent(session as any, "continue", {
@@ -407,20 +439,25 @@ describe("agent-runner usage callback wiring", () => {
     const seen: any[] = [];
     session.prompt = vi.fn(async () => {
       // Successful compaction — should fire
-      for (const l of listeners) l({
-        type: "compaction_end",
-        aborted: false,
-        reason: "threshold",
-        result: { tokensBefore: 12345 },
-      });
+      for (const l of listeners)
+        l({
+          type: "compaction_end",
+          aborted: false,
+          reason: "threshold",
+          result: { tokensBefore: 12345 },
+        });
       // Aborted compaction — should NOT fire
-      for (const l of listeners) l({
-        type: "compaction_end",
-        aborted: true,
-        reason: "manual",
-        result: { tokensBefore: 99999 },
+      for (const l of listeners)
+        l({
+          type: "compaction_end",
+          aborted: true,
+          reason: "manual",
+          result: { tokensBefore: 99999 },
+        });
+      session.messages.push({
+        role: "assistant",
+        content: [{ type: "text", text: "OK" }],
       });
-      session.messages.push({ role: "assistant", content: [{ type: "text", text: "OK" }] });
     });
 
     await runAgent(ctx, "Explore", "go", {

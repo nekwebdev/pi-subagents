@@ -22,7 +22,7 @@ import type { Dirent } from "node:fs";
 import { existsSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { getAgentDir } from "@mariozechner/pi-coding-agent";
+import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { isSymlink, isUnsafeName, safeReadFile } from "./memory.js";
 
 export interface PreloadedSkill {
@@ -30,8 +30,14 @@ export interface PreloadedSkill {
   content: string;
 }
 
-export function preloadSkills(skillNames: string[], cwd: string): PreloadedSkill[] {
-  return skillNames.map((name) => ({ name, content: loadSkillContent(name, cwd) }));
+export function preloadSkills(
+  skillNames: string[],
+  cwd: string,
+): PreloadedSkill[] {
+  return skillNames.map((name) => ({
+    name,
+    content: loadSkillContent(name, cwd),
+  }));
 }
 
 function loadSkillContent(name: string, cwd: string): string {

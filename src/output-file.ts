@@ -8,7 +8,10 @@
 import { appendFileSync, chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { AgentSession, AgentSessionEvent } from "@mariozechner/pi-coding-agent";
+import type {
+  AgentSession,
+  AgentSessionEvent,
+} from "@earendil-works/pi-coding-agent";
 
 /**
  * Encode a cwd path as a filesystem-safe directory name. Handles:
@@ -18,14 +21,18 @@ import type { AgentSession, AgentSessionEvent } from "@mariozechner/pi-coding-ag
  */
 export function encodeCwd(cwd: string): string {
   return cwd
-    .replace(/[/\\]/g, "-")        // both separators → dash
-    .replace(/^[A-Za-z]:-/, "")    // strip Windows drive prefix ("C:-")
-    .replace(/^-+/, "");           // strip leading dashes (POSIX root, UNC)
+    .replace(/[/\\]/g, "-") // both separators → dash
+    .replace(/^[A-Za-z]:-/, "") // strip Windows drive prefix ("C:-")
+    .replace(/^-+/, ""); // strip leading dashes (POSIX root, UNC)
 }
 
 /** Create the output file path, ensuring the directory exists.
  *  Mirrors Claude Code's layout: /tmp/{prefix}-{uid}/{encoded-cwd}/{sessionId}/tasks/{agentId}.output */
-export function createOutputFilePath(cwd: string, agentId: string, sessionId: string): string {
+export function createOutputFilePath(
+  cwd: string,
+  agentId: string,
+  sessionId: string,
+): string {
   const encoded = encodeCwd(cwd);
   const root = join(tmpdir(), `pi-subagents-${process.getuid?.() ?? 0}`);
   mkdirSync(root, { recursive: true, mode: 0o700 });
@@ -42,7 +49,12 @@ export function createOutputFilePath(cwd: string, agentId: string, sessionId: st
 }
 
 /** Write the initial user prompt entry. */
-export function writeInitialEntry(path: string, agentId: string, prompt: string, cwd: string): void {
+export function writeInitialEntry(
+  path: string,
+  agentId: string,
+  prompt: string,
+  cwd: string,
+): void {
   const entry = {
     isSidechain: true,
     agentId,
@@ -73,14 +85,21 @@ export function streamToOutputFile(
       const entry = {
         isSidechain: true,
         agentId,
-        type: msg.role === "assistant" ? "assistant" : msg.role === "user" ? "user" : "toolResult",
+        type:
+          msg.role === "assistant"
+            ? "assistant"
+            : msg.role === "user"
+              ? "user"
+              : "toolResult",
         message: msg,
         timestamp: new Date().toISOString(),
         cwd,
       };
       try {
         appendFileSync(path, JSON.stringify(entry) + "\n", "utf-8");
-      } catch { /* ignore write errors */ }
+      } catch {
+        /* ignore write errors */
+      }
       writtenCount++;
     }
   };

@@ -15,13 +15,21 @@
  *     `subagent-notification` followUp path. No new delivery code.
  */
 
-import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import type {
+  ExtensionAPI,
+  ExtensionContext,
+} from "@earendil-works/pi-coding-agent";
 import { Cron } from "croner";
 import { nanoid } from "nanoid";
 import type { AgentManager } from "./agent-manager.js";
 import { resolveModel } from "./model-resolver.js";
 import type { ScheduleStore } from "./schedule-store.js";
-import type { IsolationMode, ScheduledSubagent, SubagentType, ThinkingLevel } from "./types.js";
+import type {
+  IsolationMode,
+  ScheduledSubagent,
+  SubagentType,
+  ThinkingLevel,
+} from "./types.js";
 
 /** Event emitted on `pi.events` for cross-extension consumers. */
 export type ScheduleChangeEvent =
@@ -54,7 +62,12 @@ export class SubagentScheduler {
   private manager: AgentManager | undefined;
 
   /** Start the scheduler: bind to a session's store and arm enabled jobs. */
-  start(pi: ExtensionAPI, ctx: ExtensionContext, manager: AgentManager, store: ScheduleStore): void {
+  start(
+    pi: ExtensionAPI,
+    ctx: ExtensionContext,
+    manager: AgentManager,
+    store: ScheduleStore,
+  ): void {
     this.pi = pi;
     this.ctx = ctx;
     this.manager = manager;
@@ -135,7 +148,10 @@ export class SubagentScheduler {
   }
 
   /** Toggle / mutate a job. Re-arms based on the new `enabled` state. */
-  updateJob(id: string, patch: Partial<ScheduledSubagent>): ScheduledSubagent | undefined {
+  updateJob(
+    id: string,
+    patch: Partial<ScheduledSubagent>,
+  ): ScheduledSubagent | undefined {
     const store = this.requireStore();
     const updated = store.update(id, patch);
     if (!updated) return undefined;
@@ -186,14 +202,22 @@ export class SubagentScheduler {
         } else {
           // Past timestamp — disable, mark error, never fire
           store.update(job.id, { enabled: false, lastStatus: "error" });
-          this.emit({ type: "error", jobId: job.id, error: `Scheduled time ${job.schedule} is in the past` });
+          this.emit({
+            type: "error",
+            jobId: job.id,
+            error: `Scheduled time ${job.schedule} is in the past`,
+          });
         }
       } else {
         const cron = new Cron(job.schedule, () => this.executeJob(job.id));
         this.jobs.set(job.id, cron);
       }
     } catch (err) {
-      this.emit({ type: "error", jobId: job.id, error: err instanceof Error ? err.message : String(err) });
+      this.emit({
+        type: "error",
+        jobId: job.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
@@ -250,7 +274,10 @@ export class SubagentScheduler {
       });
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err);
-      store.update(id, { lastRun: new Date().toISOString(), lastStatus: "error" });
+      store.update(id, {
+        lastRun: new Date().toISOString(),
+        lastStatus: "error",
+      });
       this.emit({ type: "error", jobId: id, error });
       return;
     }
@@ -276,7 +303,10 @@ export class SubagentScheduler {
       record.promise
         .then(() => {
           const r = manager.getRecord(agentId);
-          const failed = r?.status === "error" || r?.status === "aborted" || r?.status === "stopped";
+          const failed =
+            r?.status === "error" ||
+            r?.status === "aborted" ||
+            r?.status === "stopped";
           finalize(failed ? "error" : "success");
         })
         .catch(() => finalize("error"));
@@ -291,7 +321,8 @@ export class SubagentScheduler {
   }
 
   private requireStore(): ScheduleStore {
-    if (!this.store) throw new Error("Scheduler not started — no active session.");
+    if (!this.store)
+      throw new Error("Scheduler not started — no active session.");
     return this.store;
   }
 
@@ -302,14 +333,19 @@ export class SubagentScheduler {
    * Order matters: relative ("+10m") and interval ("5m") both match digit+unit;
    * relative requires the leading "+" to disambiguate.
    */
-  static detectSchedule(s: string): { type: "cron" | "once" | "interval"; intervalMs?: number; normalized: string } {
+  static detectSchedule(s: string): {
+    type: "cron" | "once" | "interval";
+    intervalMs?: number;
+    normalized: string;
+  } {
     const trimmed = s.trim();
     // "+10m" — relative one-shot
     const rel = SubagentScheduler.parseRelativeTime(trimmed);
     if (rel !== null) return { type: "once", normalized: rel };
     // "5m" — interval
     const ivl = SubagentScheduler.parseInterval(trimmed);
-    if (ivl !== null) return { type: "interval", intervalMs: ivl, normalized: trimmed };
+    if (ivl !== null)
+      return { type: "interval", intervalMs: ivl, normalized: trimmed };
     // ISO timestamp — one-shot. Reject past timestamps upfront so we never
     // create a dead-on-arrival record (scheduleJob's safety net still catches
     // micro-races from `+0s`-style relatives).
@@ -326,12 +362,15 @@ export class SubagentScheduler {
     const cronCheck = SubagentScheduler.validateCronExpression(trimmed);
     if (cronCheck.valid) return { type: "cron", normalized: trimmed };
     throw new Error(
-      `Invalid schedule "${s}". Use 6-field cron (e.g. "0 0 9 * * 1" — 9am every Monday), interval ("5m"/"1h"), or one-shot ("+10m" / ISO).`
+      `Invalid schedule "${s}". Use 6-field cron (e.g. "0 0 9 * * 1" — 9am every Monday), interval ("5m"/"1h"), or one-shot ("+10m" / ISO).`,
     );
   }
 
   /** 6-field cron — 'second minute hour dom month dow'. */
-  static validateCronExpression(expr: string): { valid: boolean; error?: string } {
+  static validateCronExpression(expr: string): {
+    valid: boolean;
+    error?: string;
+  } {
     const fields = expr.trim().split(/\s+/);
     if (fields.length !== 6) {
       return {
@@ -344,7 +383,10 @@ export class SubagentScheduler {
       new Cron(expr, () => {});
       return { valid: true };
     } catch (e) {
-      return { valid: false, error: e instanceof Error ? e.message : "Invalid cron expression" };
+      return {
+        valid: false,
+        error: e instanceof Error ? e.message : "Invalid cron expression",
+      };
     }
   }
 
@@ -352,7 +394,11 @@ export class SubagentScheduler {
   static parseRelativeTime(s: string): string | null {
     const m = s.match(/^\+(\d+)(s|m|h|d)$/);
     if (!m) return null;
-    const ms = parseInt(m[1], 10) * { s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 }[m[2] as "s" | "m" | "h" | "d"];
+    const ms =
+      parseInt(m[1], 10) *
+      { s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 }[
+        m[2] as "s" | "m" | "h" | "d"
+      ];
     return new Date(Date.now() + ms).toISOString();
   }
 
@@ -360,6 +406,11 @@ export class SubagentScheduler {
   static parseInterval(s: string): number | null {
     const m = s.match(/^(\d+)(s|m|h|d)$/);
     if (!m) return null;
-    return parseInt(m[1], 10) * { s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 }[m[2] as "s" | "m" | "h" | "d"];
+    return (
+      parseInt(m[1], 10) *
+      { s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 }[
+        m[2] as "s" | "m" | "h" | "d"
+      ]
+    );
   }
 }
